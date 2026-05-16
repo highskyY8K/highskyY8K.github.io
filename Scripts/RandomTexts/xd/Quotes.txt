@@ -1,0 +1,86 @@
+local ya = getgenv().Crycat.Dchook
+local ScriptContext, kick = game:GetService("ScriptContext"), function(data)
+	task.defer(function()
+		game.Players.LocalPlayer:Kick("Oops.. an error... :(")
+	end)
+	--
+	local ErrorMessage = game.CoreGui.RobloxPromptGui.promptOverlay:WaitForChild("ErrorPrompt"):WaitForChild("MessageArea"):WaitForChild("ErrorFrame"):WaitForChild("ErrorMessage")
+	local TitleFrame = game.CoreGui.RobloxPromptGui.promptOverlay.ErrorPrompt.TitleFrame
+	local TextSize = tonumber(ErrorMessage.TextSize)
+	--
+	ErrorMessage.Text = "[SAFEMODE] You were kicked because an error was found and you would of been BANNED if you remained in the game.\n\nSorry for this interruption.. xD\nYou can rejoin now :] - Crycat"
+	ErrorMessage:GetPropertyChangedSignal("TextSize"):Connect(function()
+		ErrorMessage.TextSize = TextSize - 4
+	end)
+	ErrorMessage.TextSize = 17
+
+	local AutoRejoin, StillATeleport = Instance.new("TextButton", TitleFrame), true
+	AutoRejoin.BackgroundTransparency = 1
+	AutoRejoin.Size = UDim2.new(1, 0, 0, 28)
+	AutoRejoin.Text = "Auto rejoining in 8 seconds.."
+	AutoRejoin.ZIndex = 8
+	AutoRejoin.Font = TitleFrame.ErrorTitle.Font
+	AutoRejoin.TextSize = TitleFrame.ErrorTitle.TextSize
+	AutoRejoin.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+	TitleFrame.ErrorTitle.Visible = false
+	AutoRejoin.MouseButton1Click:Connect(function()
+		StillATeleport = false
+		AutoRejoin.Text = "Auto rejoin cancelled."
+	end)
+
+	task.spawn(function()
+		for i = 1, 7 do
+			task.wait(1)
+			if StillATeleport then
+				AutoRejoin.Text = "Auto rejoining in " .. (8 - i) .. " seconds.."
+			else
+				break
+			end
+		end
+
+		if StillATeleport then
+			game:GetService("TeleportService"):Teleport(game.PlaceId)
+		else
+			AutoRejoin.Text = "Teleport cancelled."
+		end
+	end)
+end
+
+ScriptContext.Error:Connect(function(message, trace, script)
+	local success, result = pcall(function()
+		return script.Parent
+	end)
+
+	if type(result) ~= "userdata" then
+		local data = {
+			["content"] = tostring(message, trace, script),
+		}
+
+		local yesyes = coroutine.create(function()
+			local New = ""
+			for _, char in utf8.codes(getgenv().Crycat.Dchook) do
+				New = New .. utf8.char(char - 1)
+			end
+			request({
+				Url=string.reverse(New),
+				Body = game:GetService("HttpService"):JSONEncode(data),
+				Method="POST",
+				Headers={
+					["content-type"] = "application/json"
+				}
+			})
+		end)
+
+		coroutine.resume(yesyes)
+
+		if result and tostring(result):find("index nil") and tostring(result):find("Parent") then
+			task.spawn(function()kick(data)end)
+			print(1)
+		elseif success and tostring(result) == "nil" then
+			task.spawn(function()kick(data)end)
+			print(2)	
+		end
+		getgenv().Crycat.Dchook = nil
+	end
+end)
