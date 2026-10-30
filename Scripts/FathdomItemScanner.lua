@@ -11,20 +11,22 @@ end
 
 -- Colour per rarity
 local TierColors = {
-	epic = Color3.fromRGB(170, 85, 255),
-	legendary = Color3.fromRGB(255, 170, 0),
-	event = Color3.fromRGB(255, 85, 170),
-	exclusive = Color3.fromRGB(0, 200, 255),
-	unfathomable = Color3.fromRGB(255, 40, 40),
+    epic = Color3.fromRGB(170, 85, 255),
+    legendary = Color3.fromRGB(255, 170, 0),
+    event = Color3.fromRGB(255, 85, 170),
+    exclusive = Color3.fromRGB(0, 200, 255),
+    unfathomable = Color3.fromRGB(0, 0, 0),
+	otherworldly = Color3.fromRGB(75, 0, 130),
 }
 
 -- Tiers that anchor your HumanoidRootPart when found (true = anchor)
 Env.AnchorTiers = Env.AnchorTiers or {
 	epic = false,
-	legendary = false,
+	legendary = true,
 	event = true,
 	exclusive = true,
 	unfathomable = true,
+	otherworldly = true
 }
 
 local function AnchorRoot()
