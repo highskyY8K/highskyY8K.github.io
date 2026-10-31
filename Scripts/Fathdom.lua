@@ -4,6 +4,9 @@ local Halloween = workspace:WaitForChild("Halloween")
 local Running = true
 local Pumpkins, Collected = {}, {}
 local LastPosition = Vector3.zero
+--Pathfinding
+local Path = game:GetService("PathfindingService"):CreatePath({AgentCanJump = true})
+local Params = RaycastParams.new()
 
 local function Track(Descendant)
 	if Descendant.Name == "Pumpkin" and Descendant:IsA("Model") and not Collected[Descendant] then
@@ -20,6 +23,31 @@ local function GetNearest(Position)
 		end
 	end
 	return Nearest, Shortest
+end
+
+local function GetWaypoints(Start, Goal)
+	local Computed = pcall(Path.ComputeAsync, Path, Start, Goal)
+
+	if Computed and Path.Status == Enum.PathStatus.Success then
+		return Path:GetWaypoints()
+	end
+end
+
+-- Pathfinds toward the far mark in 150 stud steps, only to points that have ground under them
+local function GetFarWaypoints(Root)
+	local Direction = (Vector3.new(100000, 0, 100000) - Vector3.new(Root.Position.X, 0, Root.Position.Z)).Unit
+
+	Params.FilterDescendantsInstances = {Player.Character}
+
+	for _, Angle in {0, 20, -20, 40, -40, 60, -60, 90, -90} do
+		local Point = Root.Position + CFrame.Angles(0, math.rad(Angle), 0) * Direction * 150
+		local Ground = workspace:Raycast(Point + Vector3.new(0, 200, 0), Vector3.new(0, -600, 0), Params)
+		local Waypoints = Ground and GetWaypoints(Root.Position, Ground.Position)
+
+		if Waypoints then
+			return Waypoints
+		end
+	end
 end
 
 for _, Descendant in Halloween:GetDescendants() do
@@ -44,7 +72,6 @@ end)
 
 -- Walking with pathfinding
 task.spawn(function()
-	local Path = game:GetService("PathfindingService"):CreatePath({AgentCanJump = true})
 	local Waypoints, Index, Target
 	local LastCompute = 0
 
@@ -62,19 +89,15 @@ task.spawn(function()
 			continue
 		end
 
-		-- Goal is the nearest pumpkin, or the far away point if there are none
-		local Goal = Nearest and Nearest:GetPivot().Position or Vector3.new(100000, Root.Position.Y, 100000)
-
-		-- Recompute the path when needed
+		-- Recompute the path when needed (nearest pumpkin, or the far mark if there are none)
 		if Target ~= Nearest or os.clock() - LastCompute > 1.5 then
 			Target = Nearest
 			LastCompute = os.clock()
-			local Computed = pcall(Path.ComputeAsync, Path, Root.Position, Goal)
-			Waypoints = Computed and Path.Status == Enum.PathStatus.Success and Path:GetWaypoints() or nil
+			Waypoints = if Nearest then GetWaypoints(Root.Position, Nearest:GetPivot().Position) else GetFarWaypoints(Root)
 			Index = 2
 		end
 
-		-- Move to the next waypoint (flat distance), or straight at the goal if there is no path
+		-- Move to the next waypoint (flat distance)
 		local Waypoint = Waypoints and Waypoints[Index]
 		if Waypoint then
 			local Flat = Vector3.new(Root.Position.X - Waypoint.Position.X, 0, Root.Position.Z - Waypoint.Position.Z)
@@ -84,9 +107,14 @@ task.spawn(function()
 			end
 		end
 
-		Humanoid:MoveTo(Waypoint and Waypoint.Position or Goal)
+		-- No path means no walking, so it never walks off into a hole
+		if not Waypoint then
+			continue
+		end
 
-		if Waypoint and Waypoint.Action == Enum.PathWaypointAction.Jump then
+		Humanoid:MoveTo(Waypoint.Position)
+
+		if Waypoint.Action == Enum.PathWaypointAction.Jump then
 			Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
 		end
 
@@ -101,7 +129,7 @@ end)
 -- Collecting every 0.5 seconds when near
 task.spawn(function()
 	while Running do
-		task.wait(0.5)
+		task.wait(0.25)
 		local Root = Player.Character and Player.Character:FindFirstChild("HumanoidRootPart")
 		local Nearest, Distance
 		if Root then
