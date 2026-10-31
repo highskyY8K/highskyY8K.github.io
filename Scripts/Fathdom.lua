@@ -79,12 +79,9 @@ task.spawn(function()
 		task.wait(0.1)
 		local Humanoid = Player.Character and Player.Character:FindFirstChildOfClass("Humanoid")
 		local Root = Humanoid and Humanoid.RootPart
-		local Nearest, Distance
-		if Root then
-			Nearest, Distance = GetNearest(Root.Position)
-		end
+		local Nearest = Root and GetNearest(Root.Position)
 
-		if not Root or (Nearest and Distance <= 15) then
+		if not Root then
 			Waypoints, Target = nil, nil
 			continue
 		end
@@ -126,7 +123,7 @@ task.spawn(function()
 	end
 end)
 
--- Collecting every 0.5 seconds when near
+-- Collecting every 0.25 seconds when near
 task.spawn(function()
 	while Running do
 		task.wait(0.25)
@@ -137,19 +134,26 @@ task.spawn(function()
 		end
 
 		if Running and Nearest and Distance <= 15 then
-			local Success = pcall(function()
-				game:GetService("ReplicatedStorage").Packages.Networker._remotes.HalloweenService.RemoteFunction:InvokeServer(
-					"collect",
-					Nearest:GetAttribute("PumpkinKey"),
-					Nearest:GetAttribute("PumpkinId")
-				)
-			end)
+			-- Ignore this pumpkin right away so the walker moves on to the next one
+			Pumpkins[Nearest] = nil
+			Collected[Nearest] = true
 
-			-- Ignore this pumpkin from now on
-			if Success then
-				Pumpkins[Nearest] = nil
-				Collected[Nearest] = true
-			end
+			-- The server call yields, so it gets its own thread
+			task.spawn(function()
+				local Success = pcall(function()
+					game:GetService("ReplicatedStorage").Packages.Networker._remotes.HalloweenService.RemoteFunction:InvokeServer(
+						"collect",
+						Nearest:GetAttribute("PumpkinKey"),
+						Nearest:GetAttribute("PumpkinId")
+					)
+				end)
+
+				-- Put it back if the call errored so it gets retried
+				if not Success and Nearest:IsDescendantOf(Halloween) then
+					Collected[Nearest] = nil
+					Pumpkins[Nearest] = true
+				end
+			end)
 		end
 	end
 end)
