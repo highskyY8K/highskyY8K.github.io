@@ -2,30 +2,60 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Joining...</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; margin-top: 15vh; }
+  </style>
 </head>
 <body>
-  <p id="msg">Loading...</p>
-  <a id="join" style="display:none">Click here if nothing happens</a>
+  <h1 id="title">Joining...</h1>
+  <p id="msg"></p>
 
   <script>
     const params = new URLSearchParams(location.search);
     const place = params.get("place");
-    const job = params.get("job");
+    let job = params.get("job");
+
+    if (!job) {
+      for (const key of params.keys()) {
+        if (/^[0-9a-fA-F-]{36}$/.test(key)) { job = key; break; }
+      }
+    }
+
+    const title = document.getElementById("title");
+    const msg = document.getElementById("msg");
 
     const valid = /^\d+$/.test(place || "") && /^[0-9a-fA-F-]{36}$/.test(job || "");
 
     if (!valid) {
-      document.getElementById("msg").textContent =
-        "Missing or invalid place/job. Use ?place=PLACEID&job=JOBID";
+      title.textContent = "Invalid link";
+      msg.textContent = "Use ?place=PLACEID&job=JOBID";
     } else {
-      const link =
-        `roblox://experiences/start?placeId=${place}&gameInstanceId=${job}`;
-      document.getElementById("msg").textContent = "Joining...";
-      const a = document.getElementById("join");
-      a.href = link;
-      a.style.display = "inline";
-      location.href = link;
+      const appLink = `roblox://experiences/start?placeId=${place}&gameInstanceId=${job}`;
+      const webLink = `https://www.roblox.com/games/start?placeId=${place}&gameInstanceId=${job}`;
+
+      let launched = false;
+
+      const onLaunched = () => {
+        if (launched) return;
+        launched = true;
+        title.textContent = "Launched";
+        setTimeout(() => {
+          window.close();
+        }, 1500);
+      };
+
+      window.addEventListener("blur", onLaunched);
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) onLaunched();
+      });
+
+      window.location.href = appLink;
+
+      setTimeout(() => {
+        if (!launched) window.location.href = webLink;
+      }, 2000);
     }
   </script>
 </body>
