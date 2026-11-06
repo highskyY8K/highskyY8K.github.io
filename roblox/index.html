@@ -39,12 +39,16 @@
 
       const onLaunched = () => {
         if (launched) return;
-        launched = true;
-        title.textContent = "Launched";
-        setTimeout(() => {
-          window.close();
-        }, 1500);
-      };
+          launched = true;
+          title.textContent = "Launched";
+          setTimeout(() => {
+            window.open("", "_self", "");
+            window.close();
+            setTimeout(() => {
+              title.textContent = "Launched, you can close this tab";
+            }, 300);
+          }, 1500);
+};
 
       window.addEventListener("blur", onLaunched);
       document.addEventListener("visibilitychange", () => {
