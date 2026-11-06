@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Joining...</title>
+</head>
+<body>
+  <p id="msg">Loading...</p>
+  <a id="join" style="display:none">Click here if nothing happens</a>
+
+  <script>
+    const params = new URLSearchParams(location.search);
+    const place = params.get("place");
+    const job = params.get("job");
+
+    const valid = /^\d+$/.test(place || "") && /^[0-9a-fA-F-]{36}$/.test(job || "");
+
+    if (!valid) {
+      document.getElementById("msg").textContent =
+        "Missing or invalid place/job. Use ?place=PLACEID&job=JOBID";
+    } else {
+      const link =
+        `roblox://experiences/start?placeId=${place}&gameInstanceId=${job}`;
+      document.getElementById("msg").textContent = "Joining...";
+      const a = document.getElementById("join");
+      a.href = link;
+      a.style.display = "inline";
+      location.href = link;
+    }
+  </script>
+</body>
+</html>
