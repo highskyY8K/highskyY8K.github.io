@@ -6,9 +6,12 @@
 </head>
 <body>
 	<script>
-		let CreateButton = function (Text) {
+		let CreateButton = function (Path) {
 			let Button = document.createElement("button");
-			Button.textContent = Text;
+			Button.textContent = Path.split("/")[1];
+			Button.onclick = function () {
+				window.location.href = Path;
+			};
 			document.body.appendChild(Button);
 		};
 		let Webpages = [
