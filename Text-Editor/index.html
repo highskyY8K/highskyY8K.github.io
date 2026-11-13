@@ -3,19 +3,26 @@
 <head>
 	<meta charset="utf-8">
 	<title></title>
+	<style>
+		#Ghost, #Textbox { position: absolute; top: 0; left: 0; width: 100%; height: 100%; box-sizing: border-box; margin: 0; padding: 4px; border: 1px solid; font: 16px monospace; line-height: 1.4; white-space: pre-wrap; overflow-wrap: break-word; overflow-x: hidden; overflow-y: scroll; }
+		#Ghost { border-color: transparent; pointer-events: none; scrollbar-color: transparent transparent; }
+		#Textbox { background: transparent; resize: none; }
+	</style>
 </head>
 <body style="display:flex;flex-direction:column;height:100vh;margin:0">
 	<div>
 		<span id="FileBar"></span>
 		<button id="NewFile">+</button>
 	</div>
-	<textarea id="Textbox" style="flex:1;width:100%;box-sizing:border-box;resize:none"></textarea>
-	<div id="Prediction"></div>
+	<div style="flex:1;min-height:0;position:relative">
+		<div id="Ghost"></div>
+		<textarea id="Textbox"></textarea>
+	</div>
 	<script>
 		// Elements
 		let FileBar = document.getElementById("FileBar");
 		let Textbox = document.getElementById("Textbox");
-		let Prediction = document.getElementById("Prediction");
+		let Ghost = document.getElementById("Ghost");
 		// Files
 		let Files = [{ Name: "File 1", Text: "" }];
 		let Current = 0;
@@ -41,18 +48,26 @@
 			let Partial = (Textbox.value.slice(0, Textbox.selectionStart).match(/[A-Za-z']+$/) || [""])[0].toLowerCase();
 			let Counts = {};
 			let Matches;
+			let Hidden = document.createElement("span");
+			let Faded = document.createElement("span");
 			Files.forEach(function (File) {
 				(File.Text.toLowerCase().match(/[a-z']+/g) || []).forEach(function (Word) {
 					Counts[Word] = (Counts[Word] || 0) + 1;
 				});
 			});
-			Matches = Partial ? Object.keys(Counts).filter(function (Word) {
+			Matches = Partial && Textbox.selectionStart == Textbox.selectionEnd && ["", "\n"].includes(Textbox.value.charAt(Textbox.selectionStart)) ? Object.keys(Counts).filter(function (Word) {
 				return Word.length > Partial.length && Word.startsWith(Partial);
 			}).sort(function (A, B) {
 				return Counts[B] - Counts[A];
 			}) : [];
 			Suggestion = Matches.length ? Matches[0].slice(Partial.length) : "";
-			Prediction.textContent = Matches.length ? Matches[0] : "";
+			Hidden.style.visibility = "hidden";
+			Hidden.textContent = Textbox.value.slice(0, Textbox.selectionStart);
+			Faded.style.opacity = "0.4";
+			Faded.textContent = Suggestion;
+			Ghost.innerHTML = "";
+			Ghost.append(Hidden, Faded);
+			Ghost.scrollTop = Textbox.scrollTop;
 		};
 
 		let Update = function () {
@@ -63,6 +78,9 @@
 		Textbox.oninput = Update;
 		Textbox.onkeyup = Predict;
 		Textbox.onclick = Predict;
+		Textbox.onscroll = function () {
+			Ghost.scrollTop = Textbox.scrollTop;
+		};
 		Textbox.onkeydown = function (Event) {
 			if (Event.key == "Tab" && Suggestion) {
 				Event.preventDefault();
