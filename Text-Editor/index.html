@@ -1,1 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<title></title>
+</head>
+<body style="display:flex;flex-direction:column;height:100vh;margin:0">
+	<div>
+		<span id="FileBar"></span>
+		<button id="NewFile">+</button>
+	</div>
+	<textarea id="Textbox" style="flex:1;width:100%;box-sizing:border-box;resize:none"></textarea>
+	<div id="Prediction"></div>
+	<script>
+		// Elements
+		let FileBar = document.getElementById("FileBar");
+		let Textbox = document.getElementById("Textbox");
+		let Prediction = document.getElementById("Prediction");
+		// Files
+		let Files = [{ Name: "File 1", Text: "" }];
+		let Current = 0;
+		// Prediction
+		let Suggestion = "";
 
+		let RenderFiles = function () {
+			FileBar.innerHTML = "";
+			Files.forEach(function (File, Index) {
+				let Button = document.createElement("button");
+				Button.textContent = Index == Current ? "[" + File.Name + "]" : File.Name;
+				Button.onclick = function () {
+					Current = Index;
+					Textbox.value = File.Text;
+					RenderFiles();
+					Predict();
+				};
+				FileBar.appendChild(Button);
+			});
+		};
+
+		let Predict = function () {
+			let Partial = (Textbox.value.slice(0, Textbox.selectionStart).match(/[A-Za-z']+$/) || [""])[0].toLowerCase();
+			let Counts = {};
+			let Matches;
+			Files.forEach(function (File) {
+				(File.Text.toLowerCase().match(/[a-z']+/g) || []).forEach(function (Word) {
+					Counts[Word] = (Counts[Word] || 0) + 1;
+				});
+			});
+			Matches = Partial ? Object.keys(Counts).filter(function (Word) {
+				return Word.length > Partial.length && Word.startsWith(Partial);
+			}).sort(function (A, B) {
+				return Counts[B] - Counts[A];
+			}) : [];
+			Suggestion = Matches.length ? Matches[0].slice(Partial.length) : "";
+			Prediction.textContent = Matches.length ? Matches[0] : "";
+		};
+
+		let Update = function () {
+			Files[Current].Text = Textbox.value;
+			Predict();
+		};
+
+		Textbox.oninput = Update;
+		Textbox.onkeyup = Predict;
+		Textbox.onclick = Predict;
+		Textbox.onkeydown = function (Event) {
+			if (Event.key == "Tab" && Suggestion) {
+				Event.preventDefault();
+				Textbox.setRangeText(Suggestion, Textbox.selectionStart, Textbox.selectionStart, "end");
+				Update();
+			}
+		};
+
+		document.getElementById("NewFile").onclick = function () {
+			Files.push({ Name: "File " + (Files.length + 1), Text: "" });
+			Current = Files.length - 1;
+			Textbox.value = "";
+			RenderFiles();
+			Predict();
+		};
+
+		document.ondragover = function (Event) {
+			Event.preventDefault();
+		};
+		document.ondrop = async function (Event) {
+			Event.preventDefault();
+			for (let Dropped of Event.dataTransfer.files) {
+				Files.push({ Name: Dropped.name, Text: await Dropped.text() });
+			}
+			Current = Files.length - 1;
+			Textbox.value = Files[Current].Text;
+			RenderFiles();
+			Predict();
+		};
+
+		RenderFiles();
+	</script>
+</body>
+</html>
